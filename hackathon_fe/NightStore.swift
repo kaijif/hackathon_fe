@@ -10,7 +10,7 @@
 
 import Foundation
 import Combine
-import CoreLocation
+internal import CoreLocation
 
 @MainActor
 final class NightStore: ObservableObject {

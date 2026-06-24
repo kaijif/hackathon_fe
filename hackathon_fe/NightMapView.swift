@@ -7,7 +7,7 @@
 
 import SwiftUI
 import MapKit
-import CoreLocation
+internal import CoreLocation
 
 struct NightMapView: View {
     let center: CLLocationCoordinate2D?
