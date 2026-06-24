@@ -12,12 +12,22 @@ struct ContentView: View {
 
     /// Drives the invite/QR modal. `id == "new"` means "no group preselected".
     @State private var inviteContext: InviteContext?
+    @State private var showingSettings = false
 
     var body: some View {
         NavigationStack {
             content
                 .navigationTitle("Groups")
                 .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button {
+                            showingSettings = true
+                        } label: {
+                            Image(systemName: "gearshape")
+                        }
+                        .accessibilityLabel("Settings")
+                    }
+
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
                             inviteContext = .new
@@ -37,6 +47,11 @@ struct ContentView: View {
         }
         .sheet(item: $appState.pendingJoin) { request in
             JoinGroupView(groupId: request.id)
+        }
+        .sheet(isPresented: $showingSettings) {
+            NavigationStack {
+                SettingsView()
+            }
         }
         .sheet(item: guardianRoute) { route in
             NavigationStack {
