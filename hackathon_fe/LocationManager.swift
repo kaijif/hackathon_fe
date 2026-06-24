@@ -9,6 +9,7 @@
 //
 
 import Foundation
+import Combine
 import CoreLocation
 import UIKit
 
@@ -107,9 +108,9 @@ final class LocationManager: NSObject, ObservableObject {
         let nightId = activeNightIdProvider()
         uploadTask?.cancel()
         uploadTask = Task { [api] in
-            try? await api.updateLocation(userId: userId, lat: lat, lng: lng, batteryLevel: battery)
+            _ = try? await api.updateLocation(userId: userId, lat: lat, lng: lng, batteryLevel: battery)
             if let nightId {
-                try? await api.reportNightLocation(nightId: nightId, userId: userId, lat: lat, lng: lng, batteryLevel: battery)
+                _ = try? await api.reportNightLocation(nightId: nightId, userId: userId, lat: lat, lng: lng, batteryLevel: battery)
             }
         }
     }
