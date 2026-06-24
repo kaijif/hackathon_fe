@@ -6,7 +6,7 @@
 //
 
 import SwiftUI
-import CoreLocation
+internal import CoreLocation
 
 struct StartNightView: View {
     let group: Group
@@ -23,25 +23,29 @@ struct StartNightView: View {
 
     var body: some View {
         Form {
-            Section("Safe zone") {
+            Section {
                 Stepper(value: $maxRangeM, in: 100...10000, step: 100) {
                     Text("Max range: \(formattedDistance(maxRangeM))")
                 }
+            } header: {
+                Text("Safe zone")
             } footer: {
                 Text("Members beyond this distance from the start location trigger an alert.")
             }
 
-            Section("Duration") {
+            Section {
                 Picker("Night duration", selection: $timeLimitHours) {
                     ForEach(1...12, id: \.self) { hours in
                         Text("\(hours) h").tag(hours)
                     }
                 }
+            } header: {
+                Text("Duration")
             } footer: {
                 Text("The night automatically ends after this time.")
             }
 
-            Section("Check-ins") {
+            Section {
                 Picker("Ask for check-in", selection: $checkInEveryMin) {
                     ForEach([5, 10, 15, 30, 60], id: \.self) { minutes in
                         Text("Every \(minutes) min").tag(minutes)
@@ -53,14 +57,18 @@ struct StartNightView: View {
                         Text("Mark missing after \(minutes) min").tag(minutes)
                     }
                 }
+            } header: {
+                Text("Check-ins")
             } footer: {
-                Text("Controls how often each member is asked “are you OK?” and when no-response escalates.")
+                Text("Controls how often each member is asked 'are you OK?' and when no-response escalates.")
             }
 
-            Section("Battery") {
+            Section {
                 Stepper(value: $lowBatteryThreshold, in: 5...50, step: 5) {
                     Text("Low battery below: \(lowBatteryThreshold)%")
                 }
+            } header: {
+                Text("Battery")
             } footer: {
                 Text("Alerts the group when a member drops below this level.")
             }
