@@ -8,8 +8,10 @@
 import Foundation
 
 nonisolated struct APIClient: Sendable {
-    /// Base URL of the local prototype server.
-    var baseURL: URL = URL(string: "http://localhost:8080")!
+    /// Base URL for all requests, configurable in Settings (see AppConfig).
+    /// Computed so a change takes effect immediately for every APIClient,
+    /// regardless of when it was constructed.
+    var baseURL: URL { AppConfig.baseURL }
 
     struct APIError: LocalizedError {
         let status: Int?
