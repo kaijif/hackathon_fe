@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.kaiji.hackathon-fe</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>hackathon_be</string>
+			</array>
+		</dict>
+	</array>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>NightWatch uses your location during an active night so your group can see you're safe and be alerted if you go out of range.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>NightWatch needs background location so it can keep your group updated and trigger safety alerts even when the app isn't open.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>NightWatch needs background location so it can keep your group updated and trigger safety alerts even when the app isn't open.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>location</string>
+		<string>remote-notification</string>
+	</array>
+</dict>
+</plist>
