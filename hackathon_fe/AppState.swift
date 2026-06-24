@@ -9,6 +9,7 @@
 import Foundation
 import SwiftUI
 import Combine
+internal import CoreLocation
 
 /// Identifiable wrapper so a pending join can drive a `.sheet(item:)`.
 nonisolated struct JoinRequest: Identifiable, Hashable, Sendable {
