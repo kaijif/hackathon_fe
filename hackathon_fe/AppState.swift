@@ -32,9 +32,6 @@ final class AppState: ObservableObject {
     private let userIdKey = "currentUserId"
     private let userNameKey = "currentUserName"
 
-    /// A join link that arrived before a user existed; flushed after onboarding.
-    private var queuedJoinGroupId: String?
-
     // MARK: - Managers & monitoring state
 
     let locationManager = LocationManager()
@@ -85,7 +82,6 @@ final class AppState: ObservableObject {
                 currentUser = User(id: storedId, name: name)
             }
             await refreshGroups()
-            flushQueuedJoin()
             onUserReady()
         } else {
             needsOnboarding = true
@@ -100,7 +96,6 @@ final class AppState: ObservableObject {
             currentUser = user
             needsOnboarding = false
             await refreshGroups()
-            flushQueuedJoin()
             onUserReady()
         } catch {
             errorMessage = error.localizedDescription
@@ -241,24 +236,6 @@ final class AppState: ObservableObject {
             locationManager.requestAuthorization()
         }
         pushManager.requestAuthorization()
-    }
-
-    // MARK: - Deep links
-
-    func handleDeepLink(_ url: URL) {
-        guard let groupId = DeepLink.groupId(fromJoinURL: url) else { return }
-        if currentUser != nil {
-            pendingJoin = JoinRequest(id: groupId)
-        } else {
-            // Wait until the user finishes onboarding before prompting to join.
-            queuedJoinGroupId = groupId
-        }
-    }
-
-    private func flushQueuedJoin() {
-        guard let groupId = queuedJoinGroupId else { return }
-        queuedJoinGroupId = nil
-        pendingJoin = JoinRequest(id: groupId)
     }
 
     // MARK: - Persistence
