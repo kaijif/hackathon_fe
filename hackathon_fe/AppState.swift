@@ -44,6 +44,10 @@ final class AppState: ObservableObject {
     /// (the one currently being started or viewed on the Guardian screen).
     @Published var trackedNightId: String?
 
+    /// Whether the signed-in user is the admin of the tracked night's group.
+    /// When true, location updates also move the night's center.
+    private var isTrackedNightAdmin = false
+
     /// Drives navigation to the Guardian screen when a safety alert is tapped.
     var pendingNightId: String? {
         get { pushManager.pendingNightId }
@@ -55,6 +59,7 @@ final class AppState: ObservableObject {
     init() {
         locationManager.userIdProvider = { [weak self] in self?.currentUser?.id }
         locationManager.activeNightIdProvider = { [weak self] in self?.trackedNightId }
+        locationManager.isNightAdminProvider = { [weak self] in self?.isTrackedNightAdmin ?? false }
         pushManager.userIdProvider = { [weak self] in self?.currentUser?.id }
         // Re-publish nested manager changes so views observing AppState refresh.
         locationManager.objectWillChange
@@ -173,6 +178,7 @@ final class AppState: ObservableObject {
             let created = try await api.createNight(groupId: groupId, request: config)
             let started = try await api.startNight(id: created.id)
             trackedNightId = started.id
+            await updateTrackedNightAdmin()
             locationManager.uploadNow()
             await refreshGroups()
             return started
@@ -186,7 +192,10 @@ final class AppState: ObservableObject {
     func endNight(_ nightId: String) async -> Night? {
         do {
             let ended = try await api.endNight(id: nightId)
-            if trackedNightId == nightId { trackedNightId = nil }
+            if trackedNightId == nightId {
+                trackedNightId = nil
+                isTrackedNightAdmin = false
+            }
             await refreshGroups()
             return ended
         } catch {
@@ -199,6 +208,21 @@ final class AppState: ObservableObject {
     /// also report directly into it.
     func track(nightId: String?) {
         trackedNightId = nightId
+        Task { await updateTrackedNightAdmin() }
+    }
+
+    /// Resolves whether the signed-in user is the admin of the tracked night's
+    /// group. When they are, LocationManager also moves the night's center to
+    /// their location (`PUT /nights/{id}/center`) so the safe-zone follows them.
+    private func updateTrackedNightAdmin() async {
+        guard let nightId = trackedNightId,
+              let userId = currentUser?.id,
+              let groupId = (try? await api.getNight(id: nightId))?.night.groupId else {
+            isTrackedNightAdmin = false
+            return
+        }
+        let groupMembers = await members(ofGroup: groupId)
+        isTrackedNightAdmin = groupMembers.first { $0.userId == userId }?.isAdmin == true
     }
 
     // MARK: - Permissions

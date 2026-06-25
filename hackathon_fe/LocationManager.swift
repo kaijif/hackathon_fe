@@ -25,6 +25,10 @@ final class LocationManager: NSObject, ObservableObject {
     /// night immediately, in addition to the server-side propagation the backend
     /// does for `PUT /users/{id}/location`.
     var activeNightIdProvider: () -> String? = { nil }
+    /// Supplies whether the signed-in user is the active night's group admin.
+    /// When true, the admin's location updates also move the night's center
+    /// (`PUT /nights/{id}/center`) so the safe-zone circle follows them.
+    var isNightAdminProvider: () -> Bool = { false }
 
     private let manager = CLLocationManager()
     private let api: APIClient
@@ -106,11 +110,15 @@ final class LocationManager: NSObject, ObservableObject {
     private func upload(lat: Double, lng: Double, battery: Int?) {
         guard let userId = userIdProvider() else { return }
         let nightId = activeNightIdProvider()
+        let isNightAdmin = isNightAdminProvider()
         uploadTask?.cancel()
         uploadTask = Task { [api] in
             _ = try? await api.updateLocation(userId: userId, lat: lat, lng: lng, batteryLevel: battery)
             if let nightId {
                 _ = try? await api.reportNightLocation(nightId: nightId, userId: userId, lat: lat, lng: lng, batteryLevel: battery)
+                if isNightAdmin {
+                    _ = try? await api.setNightCenter(nightId: nightId, lat: lat, lng: lng)
+                }
             }
         }
     }

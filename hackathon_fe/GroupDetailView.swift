@@ -217,7 +217,7 @@ struct GroupDetailView: View {
                         Text(memberName(member))
                         Spacer()
                         if member.isAdmin == true {
-                            Text("Admin")
+                            Text("Group Leader")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -247,6 +247,7 @@ struct GroupDetailView: View {
             } label: {
                 HStack {
                     Label("Leave Group", systemImage: "rectangle.portrait.and.arrow.right")
+                        .foregroundStyle(.red)
                     if isLeaving {
                         Spacer()
                         ProgressView()

@@ -33,21 +33,16 @@ struct NightMapView: View {
 
     var body: some View {
         Map(position: $position, selection: $selectedUserId) {
-            if let center {
-                Marker("Start", systemImage: "house.fill", coordinate: center)
-                    .tint(.blue)
-
-                if let rangeMeters, rangeMeters > 0 {
-                    MapCircle(center: center, radius: rangeMeters)
-                        .foregroundStyle(.blue.opacity(0.12))
-                        .stroke(.blue.opacity(0.6), lineWidth: 1)
-                }
+            if let circleCenter, let rangeMeters, rangeMeters > 0 {
+                MapCircle(center: circleCenter, radius: rangeMeters)
+                    .foregroundStyle(.blue.opacity(0.12))
+                    .stroke(.blue.opacity(0.6), lineWidth: 1)
             }
 
             ForEach(rows) { row in
                 if let coordinate = row.coordinate {
                     Marker(row.name, coordinate: coordinate)
-                        .tint(markerColor(row.status))
+                        .tint(row.isAdmin ? .green : .blue)
                         .tag(row.id)
                 }
             }
@@ -57,6 +52,12 @@ struct NightMapView: View {
         .onChange(of: selectedUserId) { _, newValue in
             focus(on: newValue)
         }
+    }
+
+    /// The safe-zone circle follows the group admin's live location, falling back
+    /// to the night's configured center until the admin reports a location.
+    private var circleCenter: CLLocationCoordinate2D? {
+        rows.first(where: { $0.isAdmin })?.coordinate ?? center
     }
 
     /// Recenters the camera on the selected member's pin so it comes into view.
@@ -98,19 +99,6 @@ struct NightMapView: View {
         }
 
         return .automatic
-    }
-
-    private func markerColor(_ status: ParticipantStatusKind) -> Color {
-        switch status {
-        case .ok:
-            return .green
-        case .lowBattery:
-            return .orange
-        case .outOfRange, .missing:
-            return .red
-        case .unknown:
-            return .gray
-        }
     }
 }
 

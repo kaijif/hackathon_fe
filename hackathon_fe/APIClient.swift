@@ -135,6 +135,13 @@ nonisolated struct APIClient: Sendable {
         try await put("/nights/\(nightId)/range", body: SetRangeRequest(maxRangeM: maxRangeM))
     }
 
+    /// Moves the night's safe-zone center (Night.setCenter). Called as the group
+    /// admin's location updates so the circle follows them.
+    @discardableResult
+    func setNightCenter(nightId: String, lat: Double, lng: Double) async throws -> Night {
+        try await put("/nights/\(nightId)/center", body: Coords(lat: lat, lng: lng))
+    }
+
     /// Manually runs the monitoring loop (also runs server-side in the background).
     @discardableResult
     func runCheck(nightId: String) async throws -> CheckResult {

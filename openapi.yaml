@@ -528,6 +528,31 @@ paths:
         "400": { $ref: "#/components/responses/BadRequest" }
         "404": { $ref: "#/components/responses/NotFound" }
 
+  /nights/{id}/center:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    put:
+      tags: [Nights]
+      summary: Set the night's center point (Night.setCenter)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lat, lng]
+              properties:
+                lat: { type: number, format: double, example: 37.7749 }
+                lng: { type: number, format: double, example: -122.4194 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Night" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
   /nights/{id}/check:
     parameters:
       - $ref: "#/components/parameters/IdParam"
@@ -543,6 +568,42 @@ paths:
               schema: { $ref: "#/components/schemas/CheckResult" }
         "409": { $ref: "#/components/responses/Conflict" }
         "404": { $ref: "#/components/responses/NotFound" }
+
+  /nights/{id}/checkin/{userId}:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+      - $ref: "#/components/parameters/UserIdParam"
+    post:
+      tags: [Nights]
+      summary: Acknowledge a participant check-in
+      description: >
+        Records a participant's response to a periodic "are you OK?" prompt and
+        resets their check-in freshness timer for the active night. Optional
+        coordinates/battery are persisted to the user and the active night. When
+        `ok` is `false` the participant is flagged (the status enum has no
+        dedicated distress value, so `missing` is used) and every other group
+        member is alerted.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ok]
+              properties:
+                ok: { type: boolean }
+                lat: { type: number, format: double }
+                lng: { type: number, format: double }
+                batteryLevel: { type: integer, minimum: 0, maximum: 100 }
+      responses:
+        "200":
+          description: Updated participant status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ParticipantStatus" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
 
   /nights/{id}/locations:
     parameters:
@@ -623,33 +684,6 @@ paths:
                 type: object
                 properties:
                   batteryLevel: { type: integer, example: 73 }
-        "404": { $ref: "#/components/responses/NotFound" }
-
-  /nights/{id}/checkin/{userId}:
-    parameters:
-      - $ref: "#/components/parameters/IdParam"
-      - $ref: "#/components/parameters/UserIdParam"
-    post:
-      tags: [Nights]
-      summary: Acknowledge an "are you OK?" check-in (Night.checkIn)
-      description: >
-        Records a participant's check-in, resetting their check-in
-        freshness/missing timer for the active night. Optionally updates the
-        participant's location and battery. When `ok` is false the participant
-        is flagged as in distress and the rest of the group is alerted. See
-        BACKEND_HANDOFF.md for the full behavior.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/CheckInRequest" }
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ParticipantStatus" }
-        "400": { $ref: "#/components/responses/BadRequest" }
         "404": { $ref: "#/components/responses/NotFound" }
 
   /nights/{id}/messages:
@@ -904,6 +938,7 @@ components:
         status: { type: string, enum: [ok, out_of_range, low_battery, missing, unknown] }
         detail: { type: string }
         distanceM: { type: number, format: double, nullable: true }
+        lastCheckinAt: { type: string, format: date-time, nullable: true }
         updatedAt: { type: string, format: date-time }
 
     Message:
@@ -928,12 +963,3 @@ components:
         statuses:
           type: array
           items: { $ref: "#/components/schemas/ParticipantStatus" }
-
-    CheckInRequest:
-      type: object
-      required: [ok]
-      properties:
-        ok: { type: boolean, default: true, description: "False signals distress and alerts the rest of the group." }
-        lat: { type: number, format: double, nullable: true, example: 40.7128 }
-        lng: { type: number, format: double, nullable: true, example: -74.006 }
-        batteryLevel: { type: integer, minimum: 0, maximum: 100, nullable: true, example: 88 }
