@@ -86,18 +86,19 @@ struct ContentView: View {
             ForEach(appState.groups) { group in
                 NavigationLink(value: group) {
                     HStack {
-                        VStack(alignment: .leading, spacing: 2) {
+                        VStack(alignment: .leading, spacing: 4) {
                             Text(group.name)
-                                .font(.body)
+                                .font(.title2)
                                 .foregroundStyle(.primary)
                             if group.active == true {
                                 Label("Active night", systemImage: "moon.stars.fill")
-                                    .font(.caption)
+                                    .font(.subheadline)
                                     .foregroundStyle(.green)
                             }
                         }
                         Spacer()
                     }
+                    .padding(.vertical, 10)
                 }
             }
         }
