@@ -129,12 +129,14 @@ final class NightStore: ObservableObject {
         let detail: String?
         let distanceM: Double?
         let batteryLevel: Int?
+        let reportedAt: String?
         let coordinate: CLLocationCoordinate2D?
         let isCurrentUser: Bool
 
         static func == (lhs: Row, rhs: Row) -> Bool {
             lhs.id == rhs.id && lhs.status == rhs.status && lhs.distanceM == rhs.distanceM
                 && lhs.batteryLevel == rhs.batteryLevel
+                && lhs.reportedAt == rhs.reportedAt
                 && lhs.coordinate?.latitude == rhs.coordinate?.latitude
                 && lhs.coordinate?.longitude == rhs.coordinate?.longitude
         }
@@ -162,6 +164,7 @@ final class NightStore: ObservableObject {
                 detail: status?.detail,
                 distanceM: status?.distanceM,
                 batteryLevel: loc?.batteryLevel,
+                reportedAt: loc?.reportedAt,
                 coordinate: coordinate,
                 isCurrentUser: userId == currentUserId
             )

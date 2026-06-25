@@ -63,10 +63,10 @@ struct GuardianView: View {
         }
         .sheet(isPresented: $showGroupDetail) { groupSheet }
         .onChange(of: selectedUserId) { _, newValue in
-            // When a member is picked, collapse the sheet to its peek so the
-            // selected pin is visible on the map.
-            if newValue != nil {
-                withAnimation { sheetDetent = .height(Self.sheetPeek) }
+            // When a member is picked, make sure the sheet is tall enough to
+            // show their detail (raise it from the peek detent if needed).
+            if newValue != nil, sheetDetent == .height(Self.sheetPeek) {
+                withAnimation { sheetDetent = .medium }
             }
         }
     }

@@ -31,6 +31,32 @@ struct GroupDetailView: View {
     @State private var isLeaving = false
 
     var body: some View {
+        SwiftUI.Group {
+            if let selectedRow {
+                memberDetail(selectedRow)
+            } else {
+                mainContent
+            }
+        }
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await load() }
+        .sheet(isPresented: $showInvite) {
+            InviteView(group: group)
+        }
+        .confirmationDialog("Leave \u{201C}\(group.name)\u{201D}?",
+                            isPresented: $showLeaveConfirmation,
+                            titleVisibility: .visible) {
+            Button("Leave Group", role: .destructive) {
+                Task { await leave() }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("You'll stop receiving this group's alerts and check-ins.")
+        }
+    }
+
+    /// Member roster + night controls — the default content of the sheet.
+    private var mainContent: some View {
         VStack(spacing: 0) {
             if onCheckIn != nil || onEndNight != nil {
                 nightControls
@@ -48,21 +74,6 @@ struct GroupDetailView: View {
             .refreshable { await load() }
         }
         .navigationTitle("Actions")
-        .navigationBarTitleDisplayMode(.inline)
-        .task { await load() }
-        .sheet(isPresented: $showInvite) {
-            InviteView(group: group)
-        }
-        .confirmationDialog("Leave \u{201C}\(group.name)\u{201D}?",
-                            isPresented: $showLeaveConfirmation,
-                            titleVisibility: .visible) {
-            Button("Leave Group", role: .destructive) {
-                Task { await leave() }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("You'll stop receiving this group's alerts and check-ins.")
-        }
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -71,6 +82,67 @@ struct GroupDetailView: View {
                     Image(systemName: "plus")
                 }
                 .accessibilityLabel("Invite with QR code")
+            }
+        }
+    }
+
+    /// The currently selected member's live row, if any.
+    private var selectedRow: NightStore.Row? {
+        guard let id = selectedUserId?.wrappedValue else { return nil }
+        return liveRows.first { $0.id == id }
+    }
+
+    /// Detail view for a single member, shown in place of the roster when a
+    /// member is selected. The X button returns to the roster.
+    private func memberDetail(_ row: NightStore.Row) -> some View {
+        List {
+            Section {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(row.name + (row.isCurrentUser ? " (You)" : ""))
+                        .font(.title2.bold())
+                    Text(lastSeenText(row.reportedAt))
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(lastSeenColor(row.reportedAt))
+                }
+                .padding(.vertical, 4)
+            }
+
+            Section("Status") {
+                Label(row.status.label, systemImage: icon(for: row.status))
+                    .foregroundStyle(color(for: row.status))
+                if let detail = row.detail, !detail.isEmpty {
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Section("Battery") {
+                Label(row.batteryLevel.map { "\($0)%" } ?? "Unknown",
+                      systemImage: batteryIcon(row.batteryLevel))
+            }
+
+            Section("Last check-in") {
+                Label(checkInAbsolute(row.reportedAt) ?? "No check-in yet",
+                      systemImage: "clock")
+            }
+
+            if let distance = row.distanceM {
+                Section("Distance from start") {
+                    Label(distanceText(distance), systemImage: "ruler")
+                }
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .navigationTitle(row.name)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    selectedUserId?.wrappedValue = nil
+                } label: {
+                    Image(systemName: "xmark")
+                }
+                .accessibilityLabel("Back to members")
             }
         }
     }
@@ -155,7 +227,7 @@ struct GroupDetailView: View {
                 showLeaveConfirmation = true
             } label: {
                 HStack {
-                    Label("Leave Group", systemImage: "")
+                    Label("Leave Group", systemImage: "rectangle.portrait.and.arrow.right")
                     if isLeaving {
                         Spacer()
                         ProgressView()
@@ -252,6 +324,48 @@ struct GroupDetailView: View {
         case .unknown:
             return .gray
         }
+    }
+
+    private func batteryIcon(_ level: Int?) -> String {
+        guard let level else { return "battery.0percent" }
+        switch level {
+        case ..<13: return "battery.0percent"
+        case ..<38: return "battery.25percent"
+        case ..<63: return "battery.50percent"
+        case ..<88: return "battery.75percent"
+        default: return "battery.100percent"
+        }
+    }
+
+    /// Parses an ISO-8601 timestamp (with or without fractional seconds).
+    private func isoDate(_ iso: String?) -> Date? {
+        guard let iso else { return nil }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: iso) { return date }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: iso)
+    }
+
+    /// "Last seen 2 minutes ago" (or a placeholder when we've never heard from
+    /// the member during this night).
+    private func lastSeenText(_ iso: String?) -> String {
+        guard let date = isoDate(iso) else { return "No check-in yet" }
+        let formatter = RelativeDateTimeFormatter()
+        formatter.unitsStyle = .full
+        return "Last seen " + formatter.localizedString(for: date, relativeTo: Date())
+    }
+
+    /// Green when last seen under 2 minutes ago, red beyond that, grey if unknown.
+    private func lastSeenColor(_ iso: String?) -> Color {
+        guard let date = isoDate(iso) else { return .gray }
+        return Date().timeIntervalSince(date) < 120 ? .green : .red
+    }
+
+    /// Absolute formatted check-in time, e.g. "Jun 24, 2026 at 6:53 PM".
+    private func checkInAbsolute(_ iso: String?) -> String? {
+        guard let date = isoDate(iso) else { return nil }
+        return date.formatted(date: .abbreviated, time: .shortened)
     }
 
     private func load() async {
