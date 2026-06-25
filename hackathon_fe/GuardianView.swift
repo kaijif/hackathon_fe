@@ -34,8 +34,7 @@ struct GuardianView: View {
         ZStack {
             NightMapView(center: store.centerCoordinate,
                          rangeMeters: store.maxRangeMeters,
-                         rows: store.rows,
-                         cornerRadius: 0)
+                         rows: store.rows)
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -86,7 +85,7 @@ struct GuardianView: View {
     }
 
     private var statusChip: some View {
-        Group {
+        SwiftUI.Group {
             if store.night?.status == .ended {
                 Label("Night ended", systemImage: "moon.zzz.fill")
             } else {
@@ -142,10 +141,10 @@ struct GuardianView: View {
     private var groupDetailSheet: some View {
         if let group {
             NavigationStack {
-                GroupDetailView(group: group, liveRows: store.rows, onLeave: {
+                GroupDetailView(group: group, onLeave: {
                     showGroupDetail = false
                     dismiss()
-                })
+                }, liveRows: store.rows)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button { showGroupDetail = false } label: {
