@@ -29,7 +29,7 @@ struct GroupDetailView: View {
         .task { await load() }
         .refreshable { await load() }
         .sheet(isPresented: $showInvite) {
-            InviteView(preselectedGroupId: group.id)
+            InviteView(group: group)
         }
     }
 

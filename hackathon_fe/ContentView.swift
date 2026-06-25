@@ -10,8 +10,7 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject private var appState: AppState
 
-    /// Drives the invite/QR modal. `id == "new"` means "no group preselected".
-    @State private var inviteContext: InviteContext?
+    @State private var showingNewGroup = false
     @State private var showingSettings = false
 
     var body: some View {
@@ -30,16 +29,16 @@ struct ContentView: View {
 
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
-                            inviteContext = .new
+                            showingNewGroup = true
                         } label: {
                             Image(systemName: "plus")
                         }
-                        .accessibilityLabel("Create or invite to a group")
+                        .accessibilityLabel("Create a group")
                     }
                 }
                 .refreshable { await appState.refreshGroups() }
-                .sheet(item: $inviteContext) { context in
-                    InviteView(preselectedGroupId: context.groupId)
+                .sheet(isPresented: $showingNewGroup) {
+                    NewGroupView()
                 }
                 .navigationDestination(for: Group.self) { group in
                     GroupDetailView(group: group)
@@ -111,23 +110,13 @@ struct ContentView: View {
             Text("Tap + to create a group and share its QR code, or scan a friend's QR code to join.")
         } actions: {
             Button {
-                inviteContext = .new
+                showingNewGroup = true
             } label: {
                 Label("Create a Group", systemImage: "plus")
             }
             .buttonStyle(.borderedProminent)
         }
     }
-}
-
-/// Identifiable context for the invite sheet so it can be driven by `.sheet(item:)`.
-struct InviteContext: Identifiable {
-    let id: String
-
-    static let new = InviteContext(id: "new")
-
-    /// `nil` when no specific group is preselected.
-    var groupId: String? { id == "new" ? nil : id }
 }
 
 /// Identifiable wrapper for a night id so a tapped safety alert can present the
