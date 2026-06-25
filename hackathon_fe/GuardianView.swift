@@ -9,13 +9,20 @@ import SwiftUI
 
 struct GuardianView: View {
     let nightId: String
+    let navigationTitle: String
+    let onShowGroup: (() -> Void)?
 
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
     @StateObject private var store: NightStore
 
-    init(nightId: String, currentUserId: String? = nil) {
+    init(nightId: String,
+         currentUserId: String? = nil,
+         navigationTitle: String = "Guardian",
+         onShowGroup: (() -> Void)? = nil) {
         self.nightId = nightId
+        self.navigationTitle = navigationTitle
+        self.onShowGroup = onShowGroup
         _store = StateObject(wrappedValue: NightStore(nightId: nightId, currentUserId: currentUserId))
     }
 
@@ -61,8 +68,18 @@ struct GuardianView: View {
                 .padding()
                 .background(.bar)
         }
-        .navigationTitle("Guardian")
+        .navigationTitle(navigationTitle)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if onShowGroup != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { onShowGroup?() } label: {
+                        Image(systemName: "person.2")
+                    }
+                    .accessibilityLabel("Group details")
+                }
+            }
+        }
         .task {
             appState.track(nightId: nightId)
             store.startPolling()
