@@ -13,6 +13,7 @@ struct GroupView: View {
     let group: Group
 
     @EnvironmentObject private var appState: AppState
+    @Environment(\.dismiss) private var dismiss
 
     @State private var currentNight: Night?
     @State private var hasLoaded = false
@@ -22,10 +23,18 @@ struct GroupView: View {
         content
             .sheet(isPresented: $showGroupDetail) {
                 NavigationStack {
-                    GroupDetailView(group: group)
+                    GroupDetailView(group: group, onLeave: {
+                        showGroupDetail = false
+                        dismiss()
+                    })
                         .toolbar {
-                            ToolbarItem(placement: .topBarLeading) {
-                                Button("Done") { showGroupDetail = false }
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button {
+                                    showGroupDetail = false
+                                } label: {
+                                    Image(systemName: "xmark")
+                                }
+                                .accessibilityLabel("Close")
                             }
                         }
                 }

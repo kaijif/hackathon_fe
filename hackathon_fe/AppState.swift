@@ -140,6 +140,21 @@ final class AppState: ObservableObject {
         await refreshGroups()
     }
 
+    /// Leaves the group and refreshes the list. Returns true on success.
+    @discardableResult
+    func leaveGroup(_ groupId: String) async -> Bool {
+        guard let userId = currentUser?.id else { return false }
+        errorMessage = nil
+        do {
+            try await api.leaveGroup(groupId: groupId, userId: userId)
+            await refreshGroups()
+            return true
+        } catch {
+            errorMessage = error.localizedDescription
+            return false
+        }
+    }
+
     // MARK: - Nights & monitoring
 
     func members(ofGroup groupId: String) async -> [Member] {
