@@ -46,8 +46,7 @@ struct GroupView: View {
                 group: group,
                 onLeave: { dismiss() },
                 title: group.name,
-                showsStartNight: true,
-                glassBackground: true
+                showsStartNight: true
             )
         }
     }
