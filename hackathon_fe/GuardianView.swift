@@ -136,6 +136,7 @@ struct GuardianView: View {
                 )
             }
             .presentationDetents([.height(Self.sheetPeek), .medium, .large], selection: $sheetDetent)
+            .presentationBackground(.thinMaterial)
             .presentationBackgroundInteraction(.enabled(upThrough: .medium))
             .presentationDragIndicator(.visible)
             .interactiveDismissDisabled()
