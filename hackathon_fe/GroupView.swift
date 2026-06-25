@@ -3,8 +3,8 @@
 //  hackathon_fe
 //
 //  A group's home screen. Opening a group lands here: it shows the live Guardian
-//  monitor when a night is active, otherwise a prompt to start one. The people
-//  button in the top-right opens the full group detail (members & invite).
+//  monitor when a night is active, otherwise the group's members with a Start
+//  Night button and a + to invite.
 //
 
 import SwiftUI
@@ -17,18 +17,9 @@ struct GroupView: View {
 
     @State private var currentNight: Night?
     @State private var hasLoaded = false
-    @State private var showGroupDetail = false
 
     var body: some View {
         content
-            .sheet(isPresented: $showGroupDetail) {
-                NavigationStack {
-                    GroupDetailView(group: group, onLeave: {
-                        showGroupDetail = false
-                        dismiss()
-                    })
-                }
-            }
             .onAppear { Task { await loadNight() } }
     }
 
@@ -47,47 +38,15 @@ struct GroupView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .navigationTitle(group.name)
                 .navigationBarTitleDisplayMode(.inline)
-                .toolbar { groupToolbar }
         } else {
-            noNightView
-        }
-    }
-
-    // No active night → prompt to start one, with the action in the same bottom
-    // bar position the End Night button occupies during an active night.
-    private var noNightView: some View {
-        VStack(spacing: 0) {
-            ContentUnavailableView {
-                Label("No Active Night", systemImage: "moon.zzz")
-            } description: {
-                Text("Start a night to begin watching over the group.")
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            VStack(spacing: 10) {
-                NavigationLink {
-                    StartNightView(group: group)
-                } label: {
-                    Label("Start Night", systemImage: "moon.stars.fill")
-                        .frame(maxWidth: .infinity, minHeight: 50)
-                }
-                .buttonStyle(.borderedProminent)
-            }
-            .padding()
-            .background(.bar)
-        }
-        .navigationTitle(group.name)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar { groupToolbar }
-    }
-
-    @ToolbarContentBuilder
-    private var groupToolbar: some ToolbarContent {
-        ToolbarItem(placement: .topBarTrailing) {
-            Button { showGroupDetail = true } label: {
-                Image(systemName: "person.2")
-            }
-            .accessibilityLabel("Group details")
+            // No active night → the group's members in the main content, with a
+            // Start Night button and a + to invite (both handled by GroupDetailView).
+            GroupDetailView(
+                group: group,
+                onLeave: { dismiss() },
+                title: group.name,
+                showsStartNight: true
+            )
         }
     }
 
