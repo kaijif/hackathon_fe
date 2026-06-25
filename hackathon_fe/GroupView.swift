@@ -50,7 +50,7 @@ struct GroupView: View {
                 nightId: night.id,
                 currentUserId: appState.currentUser?.id,
                 navigationTitle: group.name,
-                onShowGroup: { showGroupDetail = true }
+                group: group
             )
         } else if !hasLoaded {
             ProgressView("Loading\u{2026}")
