@@ -31,7 +31,8 @@ struct GroupView: View {
                 nightId: night.id,
                 currentUserId: appState.currentUser?.id,
                 navigationTitle: group.name,
-                group: group
+                group: group,
+                onNightEnded: { currentNight = nil }
             )
         } else if !hasLoaded {
             ProgressView("Loading\u{2026}")
@@ -45,7 +46,8 @@ struct GroupView: View {
                 group: group,
                 onLeave: { dismiss() },
                 title: group.name,
-                showsStartNight: true
+                showsStartNight: true,
+                glassBackground: true
             )
         }
     }

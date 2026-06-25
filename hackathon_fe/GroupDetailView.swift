@@ -26,6 +26,9 @@ struct GroupDetailView: View {
     /// When true, a Start Night button is shown in a bottom bar (used by the
     /// group home when no night is active).
     var showsStartNight: Bool = false
+    /// When true, the screen uses a grey translucent glass background instead of
+    /// the default opaque system background (used by the full-screen group home).
+    var glassBackground: Bool = false
 
     @EnvironmentObject private var appState: AppState
 
@@ -41,6 +44,15 @@ struct GroupDetailView: View {
                 memberDetail(selectedRow)
             } else {
                 mainContent
+            }
+        }
+        .background {
+            if glassBackground {
+                ZStack {
+                    Rectangle().fill(.ultraThinMaterial)
+                    Color(.systemGray4).opacity(0.4)
+                }
+                .ignoresSafeArea()
             }
         }
         .navigationBarTitleDisplayMode(.inline)
