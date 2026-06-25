@@ -21,6 +21,11 @@ struct GroupDetailView: View {
     var onEndNight: (() async -> Void)? = nil
     /// When provided, tapping a live member row selects that member's map pin.
     var selectedUserId: Binding<String?>? = nil
+    /// Navigation title for the screen.
+    var title: String = "Actions"
+    /// When true, a Start Night button is shown in a bottom bar (used by the
+    /// group home when no night is active).
+    var showsStartNight: Bool = false
 
     @EnvironmentObject private var appState: AppState
 
@@ -72,8 +77,22 @@ struct GroupDetailView: View {
             }
             .scrollContentBackground(.hidden)
             .refreshable { await load() }
+
+            if showsStartNight {
+                VStack(spacing: 10) {
+                    NavigationLink {
+                        StartNightView(group: group)
+                    } label: {
+                        Label("Start Night", systemImage: "moon.stars.fill")
+                            .frame(maxWidth: .infinity, minHeight: 50)
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+                .padding()
+                .background(.bar)
+            }
         }
-        .navigationTitle("Actions")
+        .navigationTitle(title)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
