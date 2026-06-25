@@ -96,7 +96,7 @@ struct GuardianView: View {
                 Task { await store.checkIn() }
             } label: {
                 Label("I'm OK", systemImage: "checkmark.circle.fill")
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, minHeight: 50)
             }
             .buttonStyle(.borderedProminent)
 
@@ -108,7 +108,7 @@ struct GuardianView: View {
                 }
             } label: {
                 Label("End Night", systemImage: "stop.circle.fill")
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, minHeight: 50)
             }
             .buttonStyle(.bordered)
 
