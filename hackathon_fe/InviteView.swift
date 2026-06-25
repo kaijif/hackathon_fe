@@ -14,26 +14,22 @@ struct InviteView: View {
 
     @Environment(\.dismiss) private var dismiss
 
-    private var joinURLString: String {
-        DeepLink.joinURLString(groupId: group.id)
-    }
-
     var body: some View {
         NavigationStack {
             Form {
                 Section("Scan to join \u{201C}\(group.name)\u{201D}") {
                     VStack(spacing: 12) {
-                        QRCodeView(content: joinURLString)
+                        QRCodeView(content: group.id)
                             .frame(maxWidth: .infinity)
 
-                        Text(joinURLString)
+                        Text(group.id)
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
                             .textSelection(.enabled)
 
-                        ShareLink(item: joinURLString) {
-                            Label("Share invite link", systemImage: "square.and.arrow.up")
+                        ShareLink(item: group.id) {
+                            Label("Share join code", systemImage: "square.and.arrow.up")
                         }
                     }
                     .padding(.vertical, 8)

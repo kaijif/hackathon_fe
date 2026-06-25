@@ -16,9 +16,6 @@ struct hackathon_feApp: App {
         WindowGroup {
             ContentView()
                 .environmentObject(appState)
-                .onOpenURL { url in
-                    appState.handleDeepLink(url)
-                }
         }
     }
 }

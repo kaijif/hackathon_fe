@@ -12,6 +12,8 @@ struct ContentView: View {
 
     @State private var showingNewGroup = false
     @State private var showingSettings = false
+    @State private var showingScanner = false
+    @State private var scannedGroupId: String?
 
     var body: some View {
         NavigationStack {
@@ -37,6 +39,17 @@ struct ContentView: View {
                     }
                 }
                 .refreshable { await appState.refreshGroups() }
+                .safeAreaInset(edge: .bottom) {
+                    Button {
+                        showingScanner = true
+                    } label: {
+                        Label("Scan Join Code", systemImage: "qrcode.viewfinder")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity, minHeight: 50)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .padding()
+                }
                 .sheet(isPresented: $showingNewGroup) {
                     NewGroupView()
                 }
@@ -46,6 +59,19 @@ struct ContentView: View {
         }
         .sheet(item: $appState.pendingJoin) { request in
             JoinGroupView(groupId: request.id)
+        }
+        .sheet(isPresented: $showingScanner, onDismiss: {
+            // Present the join confirmation once the scanner has fully dismissed
+            // (avoids two sheets transitioning at once).
+            if let id = scannedGroupId {
+                scannedGroupId = nil
+                appState.pendingJoin = JoinRequest(id: id)
+            }
+        }) {
+            QRScannerSheet { code in
+                scannedGroupId = code
+                showingScanner = false
+            }
         }
         .sheet(isPresented: $showingSettings) {
             NavigationStack {
