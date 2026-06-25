@@ -38,13 +38,9 @@ struct GroupDetailView: View {
             if isLoading && currentNight == nil {
                 ProgressView("Loading tonight\u{2026}")
             } else if let night = currentNight, night.status == .active || night.status == .pending {
-                NavigationLink {
-                    GuardianView(nightId: night.id, currentUserId: appState.currentUser?.id)
-                        .onAppear { appState.track(nightId: night.id) }
-                } label: {
-                    Label("Open Guardian", systemImage: "shield.lefthalf.filled")
-                        .font(.headline)
-                }
+                Label("Night in progress", systemImage: "moon.stars.fill")
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
             } else {
                 NavigationLink {
                     StartNightView(group: group)

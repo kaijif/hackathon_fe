@@ -41,7 +41,7 @@ struct ContentView: View {
                     NewGroupView()
                 }
                 .navigationDestination(for: Group.self) { group in
-                    GroupDetailView(group: group)
+                    GroupView(group: group)
                 }
         }
         .sheet(item: $appState.pendingJoin) { request in
