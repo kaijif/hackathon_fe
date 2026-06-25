@@ -20,8 +20,10 @@ struct GuardianView: View {
 
     @State private var showGroupDetail = false
 
-    /// Height of the Find My–style member sheet at its smallest (peek) detent.
-    private let sheetPeek: CGFloat = 200
+    /// Height of the Find My–style member sheet at its smallest (peek) detent —
+    /// just tall enough to show the grabber, title bar and the I'm OK / End Night
+    /// controls, keeping the members list hidden until you drag up.
+    private let sheetPeek: CGFloat = 140
 
     init(nightId: String,
          currentUserId: String? = nil,
