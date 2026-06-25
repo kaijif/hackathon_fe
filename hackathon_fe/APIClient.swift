@@ -92,6 +92,11 @@ nonisolated struct APIClient: Sendable {
         try await postNoContent("/groups/\(groupId)/join", body: JoinGroupRequest(userId: userId))
     }
 
+    /// Removes the user from the group (User.leaveGroup).
+    func leaveGroup(groupId: String, userId: String) async throws {
+        try await deleteNoContent("/groups/\(groupId)/members/\(userId)")
+    }
+
     func listMembers(groupId: String) async throws -> [Member] {
         try await get("/groups/\(groupId)/members")
     }

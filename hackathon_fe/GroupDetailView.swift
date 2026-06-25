@@ -2,27 +2,30 @@
 //  GroupDetailView.swift
 //  hackathon_fe
 //
-//  Detail screen for a safety group: tonight's monitoring state, members,
-//  and invite actions.
+//  Detail screen for a safety group: members, invite, and leave actions.
 //
 
 import SwiftUI
 
 struct GroupDetailView: View {
     let group: Group
+    /// Called after the user successfully leaves, so the presenter can return
+    /// to the groups list.
+    var onLeave: () -> Void = {}
 
     @EnvironmentObject private var appState: AppState
 
     @State private var members: [Member] = []
-    @State private var currentNight: Night?
     @State private var isLoading = false
     @State private var showInvite = false
+    @State private var showLeaveConfirmation = false
+    @State private var isLeaving = false
 
     var body: some View {
         List {
-            tonightSection
             membersSection
             inviteSection
+            leaveSection
             errorSection
         }
         .navigationTitle(group.name)
@@ -31,24 +34,15 @@ struct GroupDetailView: View {
         .sheet(isPresented: $showInvite) {
             InviteView(group: group)
         }
-    }
-
-    private var tonightSection: some View {
-        Section("Tonight") {
-            if isLoading && currentNight == nil {
-                ProgressView("Loading tonight\u{2026}")
-            } else if let night = currentNight, night.status == .active || night.status == .pending {
-                Label("Night in progress", systemImage: "moon.stars.fill")
-                    .font(.headline)
-                    .foregroundStyle(.secondary)
-            } else {
-                NavigationLink {
-                    StartNightView(group: group)
-                } label: {
-                    Label("Start Night", systemImage: "moon.stars.fill")
-                        .font(.headline)
-                }
+        .confirmationDialog("Leave \u{201C}\(group.name)\u{201D}?",
+                            isPresented: $showLeaveConfirmation,
+                            titleVisibility: .visible) {
+            Button("Leave Group", role: .destructive) {
+                Task { await leave() }
             }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("You'll stop receiving this group's alerts and check-ins.")
         }
     }
 
@@ -85,6 +79,23 @@ struct GroupDetailView: View {
         }
     }
 
+    private var leaveSection: some View {
+        Section {
+            Button(role: .destructive) {
+                showLeaveConfirmation = true
+            } label: {
+                HStack {
+                    Label("Leave Group", systemImage: "rectangle.portrait.and.arrow.right")
+                    if isLeaving {
+                        Spacer()
+                        ProgressView()
+                    }
+                }
+            }
+            .disabled(isLeaving)
+        }
+    }
+
     @ViewBuilder
     private var errorSection: some View {
         if let error = appState.errorMessage {
@@ -105,7 +116,14 @@ struct GroupDetailView: View {
         defer { isLoading = false }
 
         members = await appState.members(ofGroup: group.id)
-        currentNight = await appState.currentNight(forGroup: group.id)
+    }
+
+    private func leave() async {
+        isLeaving = true
+        defer { isLeaving = false }
+        if await appState.leaveGroup(group.id) {
+            onLeave()
+        }
     }
 }
 
