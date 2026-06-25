@@ -19,11 +19,13 @@ struct GuardianView: View {
     @StateObject private var store: NightStore
 
     @State private var showGroupDetail = false
+    @State private var selectedUserId: String?
+    @State private var sheetDetent: PresentationDetent = .height(Self.sheetPeek)
 
     /// Height of the Find My–style member sheet at its smallest (peek) detent —
     /// just tall enough to show the grabber, title bar and the I'm OK / End Night
     /// controls, keeping the members list hidden until you drag up.
-    private let sheetPeek: CGFloat = 140
+    private static let sheetPeek: CGFloat = 140
 
     init(nightId: String,
          currentUserId: String? = nil,
@@ -40,7 +42,8 @@ struct GuardianView: View {
         ZStack {
             NightMapView(center: store.centerCoordinate,
                          rangeMeters: store.maxRangeMeters,
-                         rows: store.rows)
+                         rows: store.rows,
+                         selectedUserId: $selectedUserId)
                 .ignoresSafeArea()
 
             VStack(spacing: 0) {
@@ -59,6 +62,13 @@ struct GuardianView: View {
             appState.track(nightId: nil)
         }
         .sheet(isPresented: $showGroupDetail) { groupSheet }
+        .onChange(of: selectedUserId) { _, newValue in
+            // When a member is picked, collapse the sheet to its peek so the
+            // selected pin is visible on the map.
+            if newValue != nil {
+                withAnimation { sheetDetent = .height(Self.sheetPeek) }
+            }
+        }
     }
 
     // MARK: - Floating glass overlay
@@ -112,10 +122,11 @@ struct GuardianView: View {
                             showGroupDetail = false
                             dismiss()
                         }
-                    }
+                    },
+                    selectedUserId: $selectedUserId
                 )
             }
-            .presentationDetents([.height(sheetPeek), .medium, .large])
+            .presentationDetents([.height(Self.sheetPeek), .medium, .large], selection: $sheetDetent)
             .presentationBackgroundInteraction(.enabled(upThrough: .medium))
             .presentationDragIndicator(.visible)
             .interactiveDismissDisabled()

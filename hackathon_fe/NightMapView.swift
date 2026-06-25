@@ -14,19 +14,25 @@ struct NightMapView: View {
     let rangeMeters: Double?
     let rows: [NightStore.Row]
     let cornerRadius: CGFloat
+    @Binding var selectedUserId: String?
 
     @State private var position: MapCameraPosition
 
-    init(center: CLLocationCoordinate2D?, rangeMeters: Double?, rows: [NightStore.Row], cornerRadius: CGFloat = 16) {
+    init(center: CLLocationCoordinate2D?,
+         rangeMeters: Double?,
+         rows: [NightStore.Row],
+         cornerRadius: CGFloat = 16,
+         selectedUserId: Binding<String?> = .constant(nil)) {
         self.center = center
         self.rangeMeters = rangeMeters
         self.rows = rows
         self.cornerRadius = cornerRadius
+        _selectedUserId = selectedUserId
         _position = State(initialValue: Self.initialPosition(center: center, rangeMeters: rangeMeters, rows: rows))
     }
 
     var body: some View {
-        Map(position: $position) {
+        Map(position: $position, selection: $selectedUserId) {
             if let center {
                 Marker("Start", systemImage: "house.fill", coordinate: center)
                     .tint(.blue)
@@ -42,11 +48,31 @@ struct NightMapView: View {
                 if let coordinate = row.coordinate {
                     Marker(row.name, coordinate: coordinate)
                         .tint(markerColor(row.status))
+                        .tag(row.id)
                 }
             }
         }
         .mapStyle(.standard)
         .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+        .onChange(of: selectedUserId) { _, newValue in
+            focus(on: newValue)
+        }
+    }
+
+    /// Recenters the camera on the selected member's pin so it comes into view.
+    private func focus(on userId: String?) {
+        guard let userId,
+              let coordinate = rows.first(where: { $0.id == userId })?.coordinate else {
+            return
+        }
+        let meters = max(rangeMeters ?? 400, 300)
+        withAnimation {
+            position = .region(MKCoordinateRegion(
+                center: coordinate,
+                latitudinalMeters: meters,
+                longitudinalMeters: meters
+            ))
+        }
     }
 
     private static func initialPosition(
