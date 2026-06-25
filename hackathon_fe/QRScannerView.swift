@@ -107,7 +107,7 @@ private struct QRScannerRepresentable: UIViewControllerRepresentable {
 
 /// Hosts the AVCaptureSession and renders its preview layer.
 final class ScannerViewController: UIViewController {
-    weak var coordinator: QRScannerRepresentable.Coordinator?
+    fileprivate weak var coordinator: QRScannerRepresentable.Coordinator?
     var onDenied: (() -> Void)?
 
     private let session = AVCaptureSession()
