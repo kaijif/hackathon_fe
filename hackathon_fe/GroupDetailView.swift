@@ -42,6 +42,7 @@ struct GroupDetailView: View {
                 leaveSection
                 errorSection
             }
+            .scrollContentBackground(.hidden)
             .refreshable { await load() }
         }
         .navigationTitle(group.name)
