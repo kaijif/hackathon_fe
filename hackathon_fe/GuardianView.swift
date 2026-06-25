@@ -99,11 +99,11 @@ struct GuardianView: View {
             NavigationStack {
                 GroupDetailView(
                     group: group,
-                    liveRows: store.rows,
                     onLeave: {
                         showGroupDetail = false
                         dismiss()
                     },
+                    liveRows: store.rows,
                     onCheckIn: { await store.checkIn() },
                     onEndNight: {
                         if await store.endNight() != nil {
