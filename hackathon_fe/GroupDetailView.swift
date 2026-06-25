@@ -15,6 +15,10 @@ struct GroupDetailView: View {
     /// Live participant rows from the active night's monitor; when non-empty the
     /// members list shows live status instead of the plain roster.
     var liveRows: [NightStore.Row] = []
+    /// When provided, a night controls row (I'm OK / End Night) is shown at the
+    /// top of the menu.
+    var onCheckIn: (() async -> Void)? = nil
+    var onEndNight: (() async -> Void)? = nil
 
     @EnvironmentObject private var appState: AppState
 
@@ -25,15 +29,23 @@ struct GroupDetailView: View {
     @State private var isLeaving = false
 
     var body: some View {
-        List {
-            membersSection
-            inviteSection
-            leaveSection
-            errorSection
+        VStack(spacing: 0) {
+            if onCheckIn != nil || onEndNight != nil {
+                nightControls
+                    .padding(.horizontal)
+                    .padding(.bottom, 8)
+            }
+
+            List {
+                membersSection
+                leaveSection
+                errorSection
+            }
+            .refreshable { await load() }
         }
         .navigationTitle(group.name)
+        .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
-        .refreshable { await load() }
         .sheet(isPresented: $showInvite) {
             InviteView(group: group)
         }
@@ -46,6 +58,40 @@ struct GroupDetailView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("You'll stop receiving this group's alerts and check-ins.")
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    showInvite = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel("Invite with QR code")
+            }
+        }
+    }
+
+    private var nightControls: some View {
+        HStack(spacing: 10) {
+            Button {
+                Task { await onCheckIn?() }
+            } label: {
+                Label("I'm OK", systemImage: "checkmark.circle.fill")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, minHeight: 50)
+            }
+            .buttonStyle(.glassProminent)
+            .tint(.green)
+
+            Button(role: .destructive) {
+                Task { await onEndNight?() }
+            } label: {
+                Label("End Night", systemImage: "stop.circle.fill")
+                    .font(.headline)
+                    .frame(maxWidth: .infinity, minHeight: 50)
+            }
+            .buttonStyle(.glass)
+            .tint(.red)
         }
     }
 
@@ -80,23 +126,13 @@ struct GroupDetailView: View {
         liveRows.isEmpty ? members.count : liveRows.count
     }
 
-    private var inviteSection: some View {
-        Section("Invite") {
-            Button {
-                showInvite = true
-            } label: {
-                Label("Invite with QR code", systemImage: "qrcode")
-            }
-        }
-    }
-
     private var leaveSection: some View {
         Section {
             Button(role: .destructive) {
                 showLeaveConfirmation = true
             } label: {
                 HStack {
-                    Label("Leave Group", systemImage: "")
+                    Label("Leave Group", systemImage: "rectangle.portrait.and.arrow.right")
                     if isLeaving {
                         Spacer()
                         ProgressView()

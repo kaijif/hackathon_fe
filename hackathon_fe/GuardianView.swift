@@ -3,8 +3,8 @@
 //  hackathon_fe
 //
 //  Live monitoring screen for an active NightWatch night. The map fills the
-//  screen with floating Liquid Glass controls; live member status lives in the
-//  group detail sheet, opened with the people button.
+//  screen; a Find My–style sheet holds the night controls and live member
+//  status, sliding up and down over the map.
 //
 
 import SwiftUI
@@ -20,6 +20,9 @@ struct GuardianView: View {
 
     @State private var showGroupDetail = false
 
+    /// Height of the Find My–style member sheet at its smallest (peek) detent.
+    private let sheetPeek: CGFloat = 200
+
     init(nightId: String,
          currentUserId: String? = nil,
          navigationTitle: String = "Guardian",
@@ -28,6 +31,7 @@ struct GuardianView: View {
         self.navigationTitle = navigationTitle
         self.group = group
         _store = StateObject(wrappedValue: NightStore(nightId: nightId, currentUserId: currentUserId))
+        _showGroupDetail = State(initialValue: group != nil)
     }
 
     var body: some View {
@@ -40,7 +44,6 @@ struct GuardianView: View {
             VStack(spacing: 0) {
                 topBar
                 Spacer()
-                bottomControls
             }
             .padding()
         }
@@ -53,10 +56,10 @@ struct GuardianView: View {
             store.stopPolling()
             appState.track(nightId: nil)
         }
-        .sheet(isPresented: $showGroupDetail) { groupDetailSheet }
+        .sheet(isPresented: $showGroupDetail) { groupSheet }
     }
 
-    // MARK: - Floating glass overlays
+    // MARK: - Floating glass overlay
 
     private var topBar: some View {
         HStack(spacing: 10) {
@@ -71,16 +74,6 @@ struct GuardianView: View {
             statusChip
 
             Spacer()
-
-            if group != nil {
-                Button { showGroupDetail = true } label: {
-                    Image(systemName: "person.2")
-                        .font(.headline)
-                        .frame(width: 24, height: 24)
-                }
-                .buttonStyle(.glass)
-                .accessibilityLabel("Group details")
-            }
         }
     }
 
@@ -98,62 +91,32 @@ struct GuardianView: View {
         .glassEffect()
     }
 
-    private var bottomControls: some View {
-        VStack(spacing: 10) {
-            if let errorMessage = store.errorMessage {
-                Label(errorMessage, systemImage: "exclamationmark.triangle.fill")
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .glassEffect()
-            }
-
-            Button {
-                Task { await store.checkIn() }
-            } label: {
-                Label("I'm OK", systemImage: "checkmark.circle.fill")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity, minHeight: 50)
-            }
-            .buttonStyle(.glassProminent)
-            .tint(.green)
-
-            Button(role: .destructive) {
-                Task {
-                    if await store.endNight() != nil {
-                        dismiss()
-                    }
-                }
-            } label: {
-                Label("End Night", systemImage: "stop.circle.fill")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity, minHeight: 50)
-            }
-            .buttonStyle(.glass)
-            .tint(.red)
-        }
-    }
-
-    // MARK: - Group detail sheet (live members, invite & leave)
+    // MARK: - Find My–style sheet (night controls, live members, invite & leave)
 
     @ViewBuilder
-    private var groupDetailSheet: some View {
+    private var groupSheet: some View {
         if let group {
             NavigationStack {
-                GroupDetailView(group: group, onLeave: {
-                    showGroupDetail = false
-                    dismiss()
-                }, liveRows: store.rows)
-                .toolbar {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button { showGroupDetail = false } label: {
-                            Image(systemName: "xmark")
+                GroupDetailView(
+                    group: group,
+                    liveRows: store.rows,
+                    onLeave: {
+                        showGroupDetail = false
+                        dismiss()
+                    },
+                    onCheckIn: { await store.checkIn() },
+                    onEndNight: {
+                        if await store.endNight() != nil {
+                            showGroupDetail = false
+                            dismiss()
                         }
-                        .accessibilityLabel("Close")
                     }
-                }
+                )
             }
+            .presentationDetents([.height(sheetPeek), .medium, .large])
+            .presentationBackgroundInteraction(.enabled(upThrough: .medium))
+            .presentationDragIndicator(.visible)
+            .interactiveDismissDisabled()
         }
     }
 }
