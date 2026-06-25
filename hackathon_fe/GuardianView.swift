@@ -13,6 +13,9 @@ struct GuardianView: View {
     let nightId: String
     let navigationTitle: String
     let group: Group?
+    /// Called when the night is ended from here. When nil, the view dismisses
+    /// itself instead (e.g. when presented as a sheet from a safety alert).
+    let onNightEnded: (() -> Void)?
 
     @EnvironmentObject private var appState: AppState
     @Environment(\.dismiss) private var dismiss
@@ -30,10 +33,12 @@ struct GuardianView: View {
     init(nightId: String,
          currentUserId: String? = nil,
          navigationTitle: String = "Guardian",
-         group: Group? = nil) {
+         group: Group? = nil,
+         onNightEnded: (() -> Void)? = nil) {
         self.nightId = nightId
         self.navigationTitle = navigationTitle
         self.group = group
+        self.onNightEnded = onNightEnded
         _store = StateObject(wrappedValue: NightStore(nightId: nightId, currentUserId: currentUserId))
         _showGroupDetail = State(initialValue: group != nil)
     }
@@ -120,7 +125,11 @@ struct GuardianView: View {
                     onEndNight: {
                         if await store.endNight() != nil {
                             showGroupDetail = false
-                            dismiss()
+                            if let onNightEnded {
+                                onNightEnded()
+                            } else {
+                                dismiss()
+                            }
                         }
                     },
                     selectedUserId: $selectedUserId
