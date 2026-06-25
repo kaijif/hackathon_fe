@@ -33,7 +33,7 @@ struct GroupDetailView: View {
             if onCheckIn != nil || onEndNight != nil {
                 nightControls
                     .padding(.horizontal)
-                    .padding(.bottom, 8)
+                    .padding(.bottom, 28)
             }
 
             List {
