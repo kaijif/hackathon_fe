@@ -89,6 +89,7 @@ struct ContentView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(group.name)
                                 .font(.title2)
+                                .fontWeight(.semibold)
                                 .foregroundStyle(.primary)
                             if group.active == true {
                                 Label("Active night", systemImage: "moon.stars.fill")
