@@ -19,6 +19,8 @@ struct GroupDetailView: View {
     /// top of the menu.
     var onCheckIn: (() async -> Void)? = nil
     var onEndNight: (() async -> Void)? = nil
+    /// When provided, tapping a live member row selects that member's map pin.
+    var selectedUserId: Binding<String?>? = nil
 
     @EnvironmentObject private var appState: AppState
 
@@ -101,7 +103,17 @@ struct GroupDetailView: View {
         Section("Members (\(memberCount))") {
             if !liveRows.isEmpty {
                 ForEach(liveRows) { row in
-                    rowView(row)
+                    if selectedUserId != nil {
+                        Button {
+                            toggleSelection(row.id)
+                        } label: {
+                            rowView(row)
+                        }
+                        .buttonStyle(.plain)
+                        .listRowBackground(rowBackground(for: row.id))
+                    } else {
+                        rowView(row)
+                    }
                 }
             } else if members.isEmpty && isLoading {
                 ProgressView("Loading members\u{2026}")
@@ -122,6 +134,15 @@ struct GroupDetailView: View {
                 }
             }
         }
+    }
+
+    private func toggleSelection(_ userId: String) {
+        guard let selectedUserId else { return }
+        selectedUserId.wrappedValue = selectedUserId.wrappedValue == userId ? nil : userId
+    }
+
+    private func rowBackground(for userId: String) -> Color {
+        selectedUserId?.wrappedValue == userId ? Color.accentColor.opacity(0.15) : .clear
     }
 
     private var memberCount: Int {
