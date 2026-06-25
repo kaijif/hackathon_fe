@@ -13,13 +13,15 @@ struct NightMapView: View {
     let center: CLLocationCoordinate2D?
     let rangeMeters: Double?
     let rows: [NightStore.Row]
+    let cornerRadius: CGFloat
 
     @State private var position: MapCameraPosition
 
-    init(center: CLLocationCoordinate2D?, rangeMeters: Double?, rows: [NightStore.Row]) {
+    init(center: CLLocationCoordinate2D?, rangeMeters: Double?, rows: [NightStore.Row], cornerRadius: CGFloat = 16) {
         self.center = center
         self.rangeMeters = rangeMeters
         self.rows = rows
+        self.cornerRadius = cornerRadius
         _position = State(initialValue: Self.initialPosition(center: center, rangeMeters: rangeMeters, rows: rows))
     }
 
@@ -44,7 +46,7 @@ struct NightMapView: View {
             }
         }
         .mapStyle(.standard)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
     }
 
     private static func initialPosition(

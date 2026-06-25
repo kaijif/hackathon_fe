@@ -12,6 +12,9 @@ struct GroupDetailView: View {
     /// Called after the user successfully leaves, so the presenter can return
     /// to the groups list.
     var onLeave: () -> Void = {}
+    /// Live participant rows from the active night's monitor; when non-empty the
+    /// members list shows live status instead of the plain roster.
+    var liveRows: [NightStore.Row] = []
 
     @EnvironmentObject private var appState: AppState
 
@@ -47,8 +50,12 @@ struct GroupDetailView: View {
     }
 
     private var membersSection: some View {
-        Section("Members (\(members.count))") {
-            if members.isEmpty && isLoading {
+        Section("Members (\(memberCount))") {
+            if !liveRows.isEmpty {
+                ForEach(liveRows) { row in
+                    rowView(row)
+                }
+            } else if members.isEmpty && isLoading {
                 ProgressView("Loading members\u{2026}")
             } else if members.isEmpty {
                 Text("No members yet")
@@ -67,6 +74,10 @@ struct GroupDetailView: View {
                 }
             }
         }
+    }
+
+    private var memberCount: Int {
+        liveRows.isEmpty ? members.count : liveRows.count
     }
 
     private var inviteSection: some View {
@@ -109,6 +120,79 @@ struct GroupDetailView: View {
     private func memberName(_ member: Member) -> String {
         let name = member.name ?? "Member"
         return member.userId == appState.currentUser?.id ? "\(name) (You)" : name
+    }
+
+    private func rowView(_ row: NightStore.Row) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon(for: row.status))
+                .font(.title3)
+                .foregroundStyle(color(for: row.status))
+                .frame(width: 28)
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(row.name + (row.isCurrentUser ? " (You)" : ""))
+                        .font(.headline)
+                    Spacer()
+                    Text(row.status.label)
+                        .font(.caption.bold())
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .foregroundStyle(color(for: row.status))
+                        .background(color(for: row.status).opacity(0.14))
+                        .clipShape(Capsule())
+                }
+
+                HStack(spacing: 12) {
+                    if let batteryLevel = row.batteryLevel {
+                        Label("\(batteryLevel)%", systemImage: "battery.75percent")
+                    }
+                    if let distance = row.distanceM {
+                        Label(distanceText(distance), systemImage: "ruler")
+                    }
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+                if let detail = row.detail, !detail.isEmpty {
+                    Text(detail)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    private func icon(for status: ParticipantStatusKind) -> String {
+        switch status {
+        case .ok:
+            return "checkmark.circle.fill"
+        case .lowBattery, .outOfRange, .missing:
+            return "exclamationmark.triangle.fill"
+        case .unknown:
+            return "questionmark.circle"
+        }
+    }
+
+    private func distanceText(_ meters: Double) -> String {
+        if meters < 1_000 {
+            return "\(Int(meters.rounded()))m"
+        }
+        return String(format: "%.1f km", meters / 1_000)
+    }
+
+    private func color(for status: ParticipantStatusKind) -> Color {
+        switch status {
+        case .ok:
+            return .green
+        case .lowBattery:
+            return .orange
+        case .outOfRange, .missing:
+            return .red
+        case .unknown:
+            return .gray
+        }
     }
 
     private func load() async {
