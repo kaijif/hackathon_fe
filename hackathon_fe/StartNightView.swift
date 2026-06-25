@@ -90,11 +90,6 @@ struct StartNightView: View {
         .navigationTitle("Start Night")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { dismiss() }
-                    .disabled(isSubmitting)
-            }
-
             ToolbarItem(placement: .confirmationAction) {
                 Button {
                     Task { await startNight() }
