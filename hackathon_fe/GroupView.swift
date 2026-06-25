@@ -79,7 +79,7 @@ struct GroupView: View {
                     StartNightView(group: group)
                 } label: {
                     Label("Start Night", systemImage: "moon.stars.fill")
-                        .frame(maxWidth: .infinity)
+                        .frame(maxWidth: .infinity, minHeight: 50)
                 }
                 .buttonStyle(.borderedProminent)
             }
