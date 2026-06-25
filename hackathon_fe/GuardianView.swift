@@ -80,7 +80,14 @@ struct GuardianView: View {
 
     private var topBar: some View {
         HStack(spacing: 10) {
-            Button { dismiss() } label: {
+            Button {
+                // Dismiss the actions sheet instantly (no slide-down) so it
+                // doesn't linger over the Groups list while we pop back.
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) { showGroupDetail = false }
+                dismiss()
+            } label: {
                 Image(systemName: "chevron.left")
                     .font(.headline)
                     .frame(width: 24, height: 24)
