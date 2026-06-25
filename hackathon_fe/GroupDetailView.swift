@@ -45,7 +45,7 @@ struct GroupDetailView: View {
             .scrollContentBackground(.hidden)
             .refreshable { await load() }
         }
-        .navigationTitle(group.name)
+        .navigationTitle("Actions")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
         .sheet(isPresented: $showInvite) {
