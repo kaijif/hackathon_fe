@@ -132,7 +132,7 @@ struct GroupDetailView: View {
                 showLeaveConfirmation = true
             } label: {
                 HStack {
-                    Label("Leave Group", systemImage: "rectangle.portrait.and.arrow.right")
+                    Label("Leave Group", systemImage: "")
                     if isLeaving {
                         Spacer()
                         ProgressView()
