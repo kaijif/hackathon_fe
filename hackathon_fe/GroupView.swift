@@ -27,16 +27,6 @@ struct GroupView: View {
                         showGroupDetail = false
                         dismiss()
                     })
-                        .toolbar {
-                            ToolbarItem(placement: .topBarTrailing) {
-                                Button {
-                                    showGroupDetail = false
-                                } label: {
-                                    Image(systemName: "xmark")
-                                }
-                                .accessibilityLabel("Close")
-                            }
-                        }
                 }
             }
             .onAppear { Task { await loadNight() } }
