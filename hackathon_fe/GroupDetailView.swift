@@ -166,17 +166,32 @@ struct GroupDetailView: View {
         }
     }
 
+    /// The current user's live status, when an active night is being monitored.
+    private var currentUserStatus: ParticipantStatusKind? {
+        liveRows.first { $0.isCurrentUser }?.status
+    }
+
+    /// True when the current user is out of range — surfaces an "I'm safe"
+    /// check-in instead of the routine "I'm OK".
+    private var isCurrentUserOutOfRange: Bool {
+        switch currentUserStatus {
+        case .outOfRange, .outOfRangeSafe: return true
+        default: return false
+        }
+    }
+
     private var nightControls: some View {
         HStack(spacing: 10) {
             Button {
                 Task { await onCheckIn?() }
             } label: {
-                Label("I'm OK", systemImage: "checkmark.circle.fill")
+                Label(isCurrentUserOutOfRange ? "I'm safe" : "I'm OK",
+                      systemImage: isCurrentUserOutOfRange ? "hand.thumbsup.fill" : "checkmark.circle.fill")
                     .font(.headline)
                     .frame(maxWidth: .infinity, minHeight: 50)
             }
             .buttonStyle(.glassProminent)
-            .tint(.green)
+            .tint(isCurrentUserOutOfRange ? .blue : .green)
 
             Button(role: .destructive) {
                 Task { await onEndNight?() }
@@ -319,6 +334,8 @@ struct GroupDetailView: View {
         switch status {
         case .ok:
             return "checkmark.circle.fill"
+        case .outOfRangeSafe:
+            return "hand.thumbsup.fill"
         case .lowBattery, .outOfRange, .missing:
             return "exclamationmark.triangle.fill"
         case .unknown:
@@ -337,6 +354,8 @@ struct GroupDetailView: View {
         switch status {
         case .ok:
             return .green
+        case .outOfRangeSafe:
+            return .blue
         case .lowBattery:
             return .orange
         case .outOfRange, .missing:

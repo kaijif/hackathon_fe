@@ -1,0 +1,22 @@
+# macOS
+.DS_Store
+
+# Xcode
+build/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+*.moved-aside
+
+# Swift Package Manager
+/.build
+/Packages
+.swiftpm/
+
+# xtool build output
+/xtool
+
+# Misc / credentials
+.netrc

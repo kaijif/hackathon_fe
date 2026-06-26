@@ -277,7 +277,7 @@ These conventions are recommendations so the iOS notification categories/actions
 }
 ```
 
-- Guardian screen expects `NightView.currentLocations[]` as `NightLocation` records and `NightView.participantStatuses[]` as `ParticipantStatus` records. Status enum values must remain exactly: `ok`, `out_of_range`, `low_battery`, `missing`, `unknown`.
+- Guardian screen expects `NightView.currentLocations[]` as `NightLocation` records and `NightView.participantStatuses[]` as `ParticipantStatus` records. Status enum values must remain exactly: `ok`, `out_of_range`, `out_of_range_safe`, `low_battery`, `missing`, `unknown`.
 - `GET /nights/{id}/locations` should include latest `lat`, `lng`, optional `batteryLevel`, and `reportedAt` for each participant with known data.
 - `GET /nights/{id}/statuses` should include `detail`, `distanceM`, and `updatedAt` so the app can display status reason and last-seen information.
 
