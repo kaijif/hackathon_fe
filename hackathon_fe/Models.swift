@@ -101,6 +101,7 @@ nonisolated struct NightLocation: Codable, Identifiable, Hashable, Sendable {
 nonisolated enum ParticipantStatusKind: String, Codable, Sendable, Hashable {
     case ok
     case outOfRange = "out_of_range"
+    case outOfRangeSafe = "out_of_range_safe"
     case lowBattery = "low_battery"
     case missing
     case unknown
