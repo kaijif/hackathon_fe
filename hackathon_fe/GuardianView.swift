@@ -74,6 +74,26 @@ struct GuardianView: View {
                 withAnimation { sheetDetent = .medium }
             }
         }
+        .onChange(of: store.night?.status) { _, newStatus in
+            // The night ended — either the local user tapped End Night or another
+            // member/admin (or the server time limit) ended it, picked up by the
+            // store's polling. Tear the live monitor down on every device.
+            if newStatus == .ended { handleNightEnded() }
+        }
+    }
+
+    /// Cleans up and leaves the Guardian screen once the night has ended. Safe to
+    /// reach from both the local End Night action and the polled remote end.
+    private func handleNightEnded() {
+        store.stopPolling()
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) { showGroupDetail = false }
+        if let onNightEnded {
+            onNightEnded()
+        } else {
+            dismiss()
+        }
     }
 
     // MARK: - Floating glass overlay
@@ -130,14 +150,10 @@ struct GuardianView: View {
                     liveRows: store.rows,
                     onCheckIn: { await store.checkIn() },
                     onEndNight: {
-                        if await store.endNight() != nil {
-                            showGroupDetail = false
-                            if let onNightEnded {
-                                onNightEnded()
-                            } else {
-                                dismiss()
-                            }
-                        }
+                        // Mark the night ended; the status change is observed in
+                        // the body and tears the screen down (the same path a
+                        // remote/automatic end takes).
+                        await store.endNight()
                     },
                     selectedUserId: $selectedUserId
                 )

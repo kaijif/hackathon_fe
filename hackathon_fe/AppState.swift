@@ -16,6 +16,15 @@ nonisolated struct JoinRequest: Identifiable, Hashable, Sendable {
     let id: String // groupId
 }
 
+/// Result of looking up a group's current night. Distinguishes "no active night"
+/// (server 404) from a transient failure so periodic pollers don't flap between
+/// the live monitor and the roster on a momentary network blip.
+nonisolated enum NightLookup: Sendable {
+    case found(Night)
+    case absent
+    case failed
+}
+
 @MainActor
 final class AppState: ObservableObject {
     @Published var currentUser: User?
@@ -161,9 +170,16 @@ final class AppState: ObservableObject {
         (try? await api.listMembers(groupId: groupId)) ?? []
     }
 
-    /// The group's current night, or nil if none is active (the server returns 404).
-    func currentNight(forGroup groupId: String) async -> Night? {
-        try? await api.getCurrentNight(groupId: groupId)
+    /// Looks up the group's current night for pollers, distinguishing a real
+    /// "no night" (404) from a transient failure (see `NightLookup`).
+    func nightLookup(forGroup groupId: String) async -> NightLookup {
+        do {
+            return .found(try await api.getCurrentNight(groupId: groupId))
+        } catch let error as APIClient.APIError where error.status == 404 {
+            return .absent
+        } catch {
+            return .failed
+        }
     }
 
     /// Creates and immediately starts a night for the group.

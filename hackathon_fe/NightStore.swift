@@ -26,8 +26,10 @@ final class NightStore: ObservableObject {
     private let api: APIClient
     private var pollTask: Task<Void, Never>?
 
-    /// How often the Guardian screen refreshes from the server.
-    private let pollInterval: Duration = .seconds(10)
+    /// How often the Guardian screen refreshes participant locations, statuses
+    /// and the night's state from the server. Lower = more real-time, at the
+    /// cost of more requests. Tune here.
+    private let pollInterval: Duration = .seconds(3)
 
     init(nightId: String, currentUserId: String?, api: APIClient = APIClient()) {
         self.nightId = nightId

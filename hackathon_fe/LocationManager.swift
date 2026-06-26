@@ -32,8 +32,10 @@ final class LocationManager: NSObject, ObservableObject {
 
     private let manager = CLLocationManager()
     private let api: APIClient
-    /// Minimum seconds between server-side location pushes (throttle).
-    private let minUploadInterval: TimeInterval = 15
+    /// Minimum seconds between server-side location pushes (throttle). Lower =
+    /// fresher member locations during a night, at the cost of more battery and
+    /// requests. Tune here.
+    private let minUploadInterval: TimeInterval = 5
     private var lastUploadAt: Date?
     private var uploadTask: Task<Void, Never>?
 
@@ -44,7 +46,8 @@ final class LocationManager: NSObject, ObservableObject {
         authorizationStatus = manager.authorizationStatus
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyBest
-        manager.distanceFilter = 10
+        // Smaller filter = more frequent fixes (and fresher dots) while moving.
+        manager.distanceFilter = 5
         UIDevice.current.isBatteryMonitoringEnabled = true
     }
 
