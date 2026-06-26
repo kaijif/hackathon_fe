@@ -67,6 +67,7 @@ final class AppState: ObservableObject {
         locationManager.activeNightIdProvider = { [weak self] in self?.trackedNightId }
         locationManager.isNightAdminProvider = { [weak self] in self?.isTrackedNightAdmin ?? false }
         pushManager.userIdProvider = { [weak self] in self?.currentUser?.id }
+        pushManager.onError = { [weak self] message in self?.errorMessage = message }
         // Re-publish nested manager changes so views observing AppState refresh.
         locationManager.objectWillChange
             .sink { [weak self] in self?.objectWillChange.send() }
