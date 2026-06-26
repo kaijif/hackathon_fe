@@ -13,6 +13,7 @@ import Foundation
 import Combine
 import UserNotifications
 import UIKit
+import os
 
 @MainActor
 final class PushManager: NSObject, ObservableObject {
@@ -34,6 +35,9 @@ final class PushManager: NSObject, ObservableObject {
     var userIdProvider: () -> String? = { nil }
     /// Routes device-registration failures to the app's shared error UI.
     var onError: (String) -> Void = { _ in }
+
+    static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "hackathon_fe",
+                               category: "Push")
 
     /// Registers the notification categories/actions. Call once at launch.
     func configureCategories() {
@@ -61,6 +65,23 @@ final class PushManager: NSObject, ObservableObject {
         registerDeviceIfPossible()
     }
 
+    /// Called by the AppDelegate when APNs registration fails at the OS level
+    /// (e.g. no push entitlement, no network, or running in the Simulator).
+    /// Logs the failure and surfaces a detailed reason to the UI.
+    func didFailToRegister(error: Error) {
+        let message = Self.apnsFailureMessage(for: error)
+        Self.logger.error("APNs registration failed: \(message, privacy: .public)")
+        onError(message)
+    }
+
+    /// Builds a user-facing reason for a failed APNs registration, including the
+    /// underlying error domain and code to aid debugging entitlement/simulator issues.
+    nonisolated static func apnsFailureMessage(for error: Error) -> String {
+        let nsError = error as NSError
+        return "Couldn't register for push notifications. "
+            + "\(nsError.localizedDescription) (\(nsError.domain) \(nsError.code))"
+    }
+
     /// Sends the token to the backend once both the token and a user id exist.
     /// Surfaces a detailed error to the UI if the registration request fails.
     func registerDeviceIfPossible() {
@@ -69,7 +90,9 @@ final class PushManager: NSObject, ObservableObject {
             do {
                 try await api.registerDevice(userId: userId, token: token)
             } catch {
-                self?.onError(Self.registrationFailureMessage(for: error))
+                let message = Self.registrationFailureMessage(for: error)
+                Self.logger.error("Device registration request failed: \(message, privacy: .public)")
+                self?.onError(message)
             }
         }
     }

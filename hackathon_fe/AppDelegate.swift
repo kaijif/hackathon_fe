@@ -25,7 +25,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 
     func application(_ application: UIApplication,
                      didFailToRegisterForRemoteNotificationsWithError error: Error) {
-        // No APNs in the simulator / without the entitlement — safe to ignore.
+        // APNs is unavailable (e.g. Simulator without a paired push capability, a
+        // missing aps-environment entitlement, or no network). Log it and surface
+        // a detailed reason so a misconfigured build doesn't fail silently.
+        PushManager.shared.didFailToRegister(error: error)
     }
 }
 
