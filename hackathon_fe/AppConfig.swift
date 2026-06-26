@@ -11,7 +11,7 @@ import Foundation
 
 enum AppConfig {
     /// Backend used when nothing has been configured yet.
-    static let defaultBaseURL = URL(string: "http://172.20.10.3:8080")!
+    static let defaultBaseURL = URL(string: "https://nightwatch-api.blackmushroom-e45f41dc.northcentralus.azurecontainerapps.io/")!
 
     private static let baseURLKey = "apiBaseURL"
 
