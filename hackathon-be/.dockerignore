@@ -1,0 +1,28 @@
+# Keep the Docker build context small and reproducible. Nothing here is needed
+# by `go build ./cmd/server` (the embedded SQL migrations live under internal/).
+
+.git
+.gitignore
+.dockerignore
+
+# Infrastructure / tooling (must never be shipped into the image build context)
+terraform/
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Build outputs and local env
+bin/
+*.exe
+*.exe~
+.env
+.env.local
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Docs (not required to build the server)
+*.md

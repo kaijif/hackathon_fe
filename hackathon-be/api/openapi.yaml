@@ -1,0 +1,965 @@
+openapi: 3.0.3
+info:
+  title: NightWatch API
+  version: 0.1.0
+  description: >
+    Backend for a Life360-style group safety monitor with messaging and
+    monitoring. A Group of Users runs a Night (a monitored session). The server
+    periodically checks each participant's range, battery, and check-in
+    freshness and alerts those who need attention. No authentication is enforced
+    in this prototype — clients are trusted.
+servers:
+  - url: https://nightwatch-api.blackmushroom-e45f41dc.northcentralus.azurecontainerapps.io
+    description: Local server
+
+tags:
+  - name: Users
+  - name: Groups
+  - name: Agents
+  - name: Nights
+
+paths:
+  /healthz:
+    get:
+      tags: [Users]
+      summary: Health check
+      responses:
+        "200":
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+
+  /users:
+    post:
+      tags: [Users]
+      summary: Create a user (client app)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateUserRequest" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+    get:
+      tags: [Users]
+      summary: List users
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/User" }
+
+  /users/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    get:
+      tags: [Users]
+      summary: Get a user
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /users/{id}/location:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    get:
+      tags: [Users]
+      summary: Get a user's location (User.getLocation)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Location" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Users]
+      summary: Set a user's location (User.setLocation)
+      description: Updates the user's coordinates and propagates them into every active night they participate in.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SetLocationRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /users/{id}/battery:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    get:
+      tags: [Users]
+      summary: Get a user's battery level (User.getBatteryLevel)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  batteryLevel: { type: integer, nullable: true, example: 84 }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Users]
+      summary: Set a user's battery level (User.setBatteryLevel)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [batteryLevel]
+              properties:
+                batteryLevel: { type: integer, minimum: 0, maximum: 100, example: 42 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/User" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /users/{id}/groups:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+      - name: activeNight
+        in: query
+        required: false
+        schema: { type: boolean }
+        description: When true, only groups with an active night are returned (User.listGroupsWithActiveNight).
+    get:
+      tags: [Users]
+      summary: List the groups a user belongs to (User.listGroups)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Group" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /users/{id}/devices:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    get:
+      tags: [Users]
+      summary: List a user's registered push-notification devices
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/DeviceToken" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [Users]
+      summary: Register a device token for push notifications
+      description: The iOS app registers its APNs device token so the server can push alerts to it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [platform, token]
+              properties:
+                platform: { type: string, enum: [ios, android] }
+                token: { type: string, description: "APNs (or FCM) device token" }
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DeviceToken" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /users/{id}/devices/{token}:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+      - name: token
+        in: path
+        required: true
+        schema: { type: string }
+    delete:
+      tags: [Users]
+      summary: Unregister a device token
+      responses:
+        "204": { description: Unregistered }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /groups:
+    post:
+      tags: [Groups]
+      summary: Form a group (User.formGroup)
+      description: Creates a group; the creator becomes its first admin member.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateGroupRequest" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Group" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    get:
+      tags: [Groups]
+      summary: List groups
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Group" }
+
+  /groups/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    get:
+      tags: [Groups]
+      summary: Get a group
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Group" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Groups]
+      summary: Delete a group
+      responses:
+        "204": { description: Deleted }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /groups/{id}/members:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    get:
+      tags: [Groups]
+      summary: List group members
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Member" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [Groups]
+      summary: Add a member (User.joinGroup)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId]
+              properties:
+                userId: { type: string, format: uuid }
+      responses:
+        "204": { description: Joined }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /groups/{id}/join:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    post:
+      tags: [Groups]
+      summary: Join a group (User.joinGroup)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId]
+              properties:
+                userId: { type: string, format: uuid }
+      responses:
+        "204": { description: Joined }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /groups/{id}/members/{userId}:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+      - $ref: "#/components/parameters/UserIdParam"
+    delete:
+      tags: [Groups]
+      summary: Remove a member (User.leaveGroup)
+      responses:
+        "204": { description: Left }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /groups/{id}/admins:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    get:
+      tags: [Groups]
+      summary: Get group admins (Group.getAdmin)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Member" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Groups]
+      summary: Set or clear a member's admin flag (Group.setAdmin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, isAdmin]
+              properties:
+                userId: { type: string, format: uuid }
+                isAdmin: { type: boolean }
+      responses:
+        "204": { description: Updated }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /groups/{id}/night:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    get:
+      tags: [Groups]
+      summary: Get the group's current night (Group.currNight)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Night" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /groups/{id}/nights:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    get:
+      tags: [Groups]
+      summary: List a group's nights
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Night" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [Nights]
+      summary: Create a night for a group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateNightRequest" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Night" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /agents:
+    post:
+      tags: [Agents]
+      summary: Create a monitoring agent persona
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, example: "Watcher" }
+                description: { type: string }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Agent" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+    get:
+      tags: [Agents]
+      summary: List agents
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Agent" }
+
+  /agents/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    get:
+      tags: [Agents]
+      summary: Get an agent
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Agent" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /nights/{id}:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    get:
+      tags: [Nights]
+      summary: Get a night with current locations and participant statuses
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NightView" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      tags: [Nights]
+      summary: Delete a night (Night.delete)
+      responses:
+        "204": { description: Deleted }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /nights/{id}/start:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    post:
+      tags: [Nights]
+      summary: Start a night (Night.start)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Night" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /nights/{id}/end:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    post:
+      tags: [Nights]
+      summary: End a night (Night.end)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Night" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /nights/{id}/range:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    put:
+      tags: [Nights]
+      summary: Set the max range from center (Night.setRange)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [maxRangeM]
+              properties:
+                maxRangeM: { type: integer, minimum: 1, example: 1500 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Night" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /nights/{id}/center:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    put:
+      tags: [Nights]
+      summary: Set the night's center point (Night.setCenter)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lat, lng]
+              properties:
+                lat: { type: number, format: double, example: 37.7749 }
+                lng: { type: number, format: double, example: -122.4194 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Night" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /nights/{id}/check:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    post:
+      tags: [Nights]
+      summary: Manually run the monitoring loop (Night.check)
+      description: Evaluates every participant and dispatches alerts as needed. Also runs automatically in the background.
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CheckResult" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /nights/{id}/checkin/{userId}:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+      - $ref: "#/components/parameters/UserIdParam"
+    post:
+      tags: [Nights]
+      summary: Acknowledge a participant check-in
+      description: >
+        Records a participant's response to a periodic "are you OK?" prompt and
+        resets their check-in freshness timer for the active night. Optional
+        coordinates/battery are persisted to the user and the active night. When
+        `ok` is `false` the participant is flagged (the status enum has no
+        dedicated distress value, so `missing` is used) and every other group
+        member is alerted.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ok]
+              properties:
+                ok: { type: boolean }
+                lat: { type: number, format: double }
+                lng: { type: number, format: double }
+                batteryLevel: { type: integer, minimum: 0, maximum: 100 }
+      responses:
+        "200":
+          description: Updated participant status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ParticipantStatus" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+
+  /nights/{id}/locations:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    get:
+      tags: [Nights]
+      summary: List current participant locations (Night.currentLocations)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/NightLocation" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /nights/{id}/locations/{userId}:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+      - $ref: "#/components/parameters/UserIdParam"
+    get:
+      tags: [Nights]
+      summary: Get a participant's location (Night.getLocationOf)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NightLocation" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    put:
+      tags: [Nights]
+      summary: Report a participant's location into the night
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SetLocationRequest" }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/NightLocation" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /nights/{id}/statuses:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    get:
+      tags: [Nights]
+      summary: List participant statuses (Night.participantStatuses)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/ParticipantStatus" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /nights/{id}/battery/{userId}:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+      - $ref: "#/components/parameters/UserIdParam"
+    get:
+      tags: [Nights]
+      summary: Get a participant's battery level (Night.getBatteryLevelOf)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  batteryLevel: { type: integer, example: 73 }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /nights/{id}/messages:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    get:
+      tags: [Nights]
+      summary: List messages dispatched for a night
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Message" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      tags: [Nights]
+      summary: Message specific participants (Night.message)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userIds, body]
+              properties:
+                userIds:
+                  type: array
+                  items: { type: string, format: uuid }
+                body: { type: string, example: "Check in please." }
+      responses:
+        "201":
+          description: Sent
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Message" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+  /nights/{id}/notify:
+    parameters:
+      - $ref: "#/components/parameters/IdParam"
+    post:
+      tags: [Nights]
+      summary: Broadcast to all participants (Night.notifyAll)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, example: "Heading home in 10 minutes." }
+      responses:
+        "201":
+          description: Sent
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/Message" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+
+components:
+  parameters:
+    IdParam:
+      name: id
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    UserIdParam:
+      name: userId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  responses:
+    BadRequest:
+      description: Validation error
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    Conflict:
+      description: Conflicting state
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+
+    Coords:
+      type: object
+      properties:
+        lat: { type: number, format: double }
+        lng: { type: number, format: double }
+
+    Location:
+      type: object
+      properties:
+        lat: { type: number, format: double, nullable: true }
+        lng: { type: number, format: double, nullable: true }
+        batteryLevel: { type: integer, nullable: true }
+        updatedAt: { type: string, format: date-time, nullable: true }
+
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        trustedContact: { type: string, description: "Phone number of an emergency contact" }
+        lat: { type: number, format: double, nullable: true }
+        lng: { type: number, format: double, nullable: true }
+        batteryLevel: { type: integer, nullable: true }
+        locationUpdatedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    CreateUserRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, example: "Alex" }
+        trustedContact: { type: string, example: "+15551234567" }
+        lat: { type: number, format: double }
+        lng: { type: number, format: double }
+        batteryLevel: { type: integer, minimum: 0, maximum: 100 }
+
+    SetLocationRequest:
+      type: object
+      required: [lat, lng]
+      properties:
+        lat: { type: number, format: double, example: 40.7128 }
+        lng: { type: number, format: double, example: -74.006 }
+        batteryLevel: { type: integer, minimum: 0, maximum: 100, example: 88 }
+
+    Group:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        active: { type: boolean }
+        currNightId: { type: string, format: uuid, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    CreateGroupRequest:
+      type: object
+      required: [name, creatorUserId]
+      properties:
+        name: { type: string, example: "Night Crew" }
+        creatorUserId: { type: string, format: uuid }
+
+    Member:
+      type: object
+      properties:
+        userId: { type: string, format: uuid }
+        name: { type: string }
+        isAdmin: { type: boolean }
+        joinedAt: { type: string, format: date-time }
+
+    Agent:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        description: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    DeviceToken:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        platform: { type: string, enum: [ios, android] }
+        token: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    Night:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        groupId: { type: string, format: uuid }
+        agentId: { type: string, format: uuid, nullable: true }
+        centerLat: { type: number, format: double, nullable: true }
+        centerLng: { type: number, format: double, nullable: true }
+        timeLimitMin: { type: integer, description: "Total duration; the night auto-ends after this." }
+        checkInLimitMin: { type: integer, description: "Max minutes without a check-in before a participant is flagged missing." }
+        checkInEveryMin: { type: integer, description: "How often the background scheduler runs check()." }
+        maxRangeM: { type: integer, description: "Maximum allowed distance from center in meters." }
+        lowBatteryThreshold: { type: integer, description: "Battery percent below which a participant is flagged." }
+        status: { type: string, enum: [pending, active, ended] }
+        startedAt: { type: string, format: date-time, nullable: true }
+        endedAt: { type: string, format: date-time, nullable: true }
+        lastCheckedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+
+    NightView:
+      allOf:
+        - $ref: "#/components/schemas/Night"
+        - type: object
+          properties:
+            currentLocations:
+              type: array
+              items: { $ref: "#/components/schemas/NightLocation" }
+            participantStatuses:
+              type: array
+              items: { $ref: "#/components/schemas/ParticipantStatus" }
+
+    CreateNightRequest:
+      type: object
+      properties:
+        agentId: { type: string, format: uuid, nullable: true }
+        center: { $ref: "#/components/schemas/Coords" }
+        timeLimitMin: { type: integer, default: 480 }
+        checkInLimitMin: { type: integer, default: 60 }
+        checkInEveryMin: { type: integer, default: 15 }
+        maxRangeM: { type: integer, default: 1000 }
+        lowBatteryThreshold: { type: integer, default: 20 }
+
+    NightLocation:
+      type: object
+      properties:
+        nightId: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        lat: { type: number, format: double }
+        lng: { type: number, format: double }
+        batteryLevel: { type: integer, nullable: true }
+        reportedAt: { type: string, format: date-time }
+
+    ParticipantStatus:
+      type: object
+      properties:
+        nightId: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        status: { type: string, enum: [ok, out_of_range, out_of_range_safe, low_battery, missing, unknown] }
+        detail: { type: string }
+        distanceM: { type: number, format: double, nullable: true }
+        lastCheckinAt: { type: string, format: date-time, nullable: true }
+        updatedAt: { type: string, format: date-time }
+
+    Message:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        nightId: { type: string, format: uuid, nullable: true }
+        groupId: { type: string, format: uuid, nullable: true }
+        recipientUserId: { type: string, format: uuid, nullable: true }
+        recipientContact: { type: string }
+        kind: { type: string, enum: [message, notify, alert] }
+        body: { type: string }
+        sender: { type: string }
+        createdAt: { type: string, format: date-time }
+
+    CheckResult:
+      type: object
+      properties:
+        nightId: { type: string, format: uuid }
+        ended: { type: boolean, description: "True if this check ended the night (time limit reached)." }
+        alerts: { type: integer, description: "Number of participants flagged with a problem." }
+        statuses:
+          type: array
+          items: { $ref: "#/components/schemas/ParticipantStatus" }

@@ -1,0 +1,21 @@
+# Binaries
+/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test / coverage
+*.out
+coverage.*
+
+# Env
+.env
+.env.local
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

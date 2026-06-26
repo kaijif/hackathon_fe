@@ -1,0 +1,32 @@
+# Copy to terraform.tfvars and adjust as needed. All values shown are defaults.
+
+# Azure subscription to deploy into. Alternatively export ARM_SUBSCRIPTION_ID.
+# subscription_id = "00000000-0000-0000-0000-000000000000"
+
+# Azure region.
+location = "eastus"
+
+# Resource name prefix (lowercase letters/digits; used to build a unique ACR name).
+name_prefix = "nightwatch"
+
+# --- Database ---
+# Leave db_admin_password empty to auto-generate a strong, URL-safe password.
+# db_admin_username  = "nightwatch"
+# db_admin_password  = ""
+# postgres_sku_name  = "B_Standard_B1ms"
+# postgres_storage_mb = 32768
+
+# Optional: allow your workstation's public IP through the Postgres firewall.
+# allow_client_ip = "203.0.113.10"
+
+# --- Runtime ---
+# container_cpu    = 0.5
+# container_memory = "1Gi"
+# min_replicas     = 1
+# max_replicas     = 3
+
+# --- App config ---
+# monitor_enabled               = true
+# monitor_tick                  = "30s"
+# default_low_battery_threshold = 20
+# log_level                     = "info"
