@@ -935,7 +935,7 @@ components:
       properties:
         nightId: { type: string, format: uuid }
         userId: { type: string, format: uuid }
-        status: { type: string, enum: [ok, out_of_range, low_battery, missing, unknown] }
+        status: { type: string, enum: [ok, out_of_range, out_of_range_safe, low_battery, missing, unknown] }
         detail: { type: string }
         distanceM: { type: number, format: double, nullable: true }
         lastCheckinAt: { type: string, format: date-time, nullable: true }

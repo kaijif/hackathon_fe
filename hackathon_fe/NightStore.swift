@@ -188,10 +188,11 @@ extension ParticipantStatusKind {
     /// Higher = more urgent; used to sort and color the Guardian list.
     var severity: Int {
         switch self {
-        case .missing: return 4
-        case .outOfRange: return 3
-        case .lowBattery: return 2
-        case .unknown: return 1
+        case .missing: return 5
+        case .outOfRange: return 4
+        case .lowBattery: return 3
+        case .unknown: return 2
+        case .outOfRangeSafe: return 1
         case .ok: return 0
         }
     }
@@ -200,6 +201,7 @@ extension ParticipantStatusKind {
         switch self {
         case .ok: return "OK"
         case .outOfRange: return "Out of range"
+        case .outOfRangeSafe: return "Safe (out of range)"
         case .lowBattery: return "Low battery"
         case .missing: return "Missing"
         case .unknown: return "Unknown"
