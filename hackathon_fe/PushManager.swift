@@ -32,6 +32,8 @@ final class PushManager: NSObject, ObservableObject {
     private let api = APIClient()
     /// Supplies the signed-in user id so device registration targets the user.
     var userIdProvider: () -> String? = { nil }
+    /// Routes device-registration failures to the app's shared error UI.
+    var onError: (String) -> Void = { _ in }
 
     /// Registers the notification categories/actions. Call once at launch.
     func configureCategories() {
@@ -60,9 +62,32 @@ final class PushManager: NSObject, ObservableObject {
     }
 
     /// Sends the token to the backend once both the token and a user id exist.
+    /// Surfaces a detailed error to the UI if the registration request fails.
     func registerDeviceIfPossible() {
         guard let token = deviceToken, let userId = userIdProvider() else { return }
-        Task { [api] in try? await api.registerDevice(userId: userId, token: token) }
+        Task { [api, weak self] in
+            do {
+                try await api.registerDevice(userId: userId, token: token)
+            } catch {
+                self?.onError(Self.registrationFailureMessage(for: error))
+            }
+        }
+    }
+
+    /// Builds a user-facing reason for a failed device registration, including the
+    /// HTTP status and server message when the backend supplied them.
+    nonisolated static func registrationFailureMessage(for error: Error) -> String {
+        let detail: String
+        if let apiError = error as? APIClient.APIError {
+            if let status = apiError.status, !apiError.message.contains("HTTP \(status)") {
+                detail = "HTTP \(status): \(apiError.message)"
+            } else {
+                detail = apiError.message
+            }
+        } else {
+            detail = error.localizedDescription
+        }
+        return "Couldn't register this device for notifications. \(detail)"
     }
 
     /// Handles a tapped notification or one of its actions.
