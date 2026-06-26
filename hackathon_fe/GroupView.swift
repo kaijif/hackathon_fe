@@ -18,9 +18,14 @@ struct GroupView: View {
     @State private var currentNight: Night?
     @State private var hasLoaded = false
 
+    /// How often the group home re-checks whether a night has started or ended,
+    /// so it flips to/from the live Guardian monitor without a manual refresh.
+    /// Lower = more real-time, at the cost of more requests. Tune here.
+    private static let nightPollInterval: Duration = .seconds(4)
+
     var body: some View {
         content
-            .onAppear { Task { await loadNight() } }
+            .task { await pollNight() }
     }
 
     @ViewBuilder
@@ -55,8 +60,25 @@ struct GroupView: View {
         night.status == .active || night.status == .pending
     }
 
-    private func loadNight() async {
-        currentNight = await appState.currentNight(forGroup: group.id)
+    /// Periodically re-checks the group's night so the home flips to the live
+    /// monitor when anyone starts a night, and back to the roster when the night
+    /// ends (here or on another member's device). Runs until the view goes away.
+    private func pollNight() async {
+        while !Task.isCancelled {
+            await refreshNight()
+            try? await Task.sleep(for: Self.nightPollInterval)
+        }
+    }
+
+    private func refreshNight() async {
+        switch await appState.nightLookup(forGroup: group.id) {
+        case .found(let night):
+            currentNight = night
+        case .absent:
+            currentNight = nil
+        case .failed:
+            break // keep the last known state to avoid flicker on a network blip
+        }
         hasLoaded = true
     }
 }
